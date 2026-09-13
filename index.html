@@ -198,17 +198,22 @@
             }
 
             const certs = Object.keys(data).map(key => ({ id: key, ...data[key] }));
-            const levelWeight = { 'C1': 3, 'B2': 2, 'B1': 1 };
-            
-            // Сортировка по уровню и имени
-            certs.sort((a, b) => {
-                const weightA = levelWeight[a.levelCategory] || 0;
-                const weightB = levelWeight[b.levelCategory] || 0;
-                if (weightA !== weightB) return weightB - weightA;
-                const nameA = a.lastName ? a.lastName.toLowerCase() : '';
-                const nameB = b.lastName ? b.lastName.toLowerCase() : '';
-                return nameA.localeCompare(nameB);
-            });
+const levelWeight = { 'C1': 3, 'B2': 2, 'B1': 1 };
+
+// Сортировка по уровню, типу (IELTS выше CEFR) и фамилии
+certs.sort((a, b) => {
+    const weightA = levelWeight[a.levelCategory] || 0;
+    const weightB = levelWeight[b.levelCategory] || 0;
+    if (weightA !== weightB) return weightB - weightA;
+
+    if (a.type !== b.type) {
+        return a.type === 'IELTS' ? -1 : 1;
+    }
+
+    const nameA = a.lastName ? a.lastName.toLowerCase() : '';
+    const nameB = b.lastName ? b.lastName.toLowerCase() : '';
+    return nameA.localeCompare(nameB);
+});
 
             // МГНОВЕННАЯ ОТРИСОВКА КАРТОЧЕК (без изображений)
             certs.forEach(cert => {
