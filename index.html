@@ -92,17 +92,19 @@
             position: relative;
         }
 
-        /* Base highlighted borders and shadow */
         .card.level-c1 { border: 2px solid var(--gold); box-shadow: 0 0 10px var(--gold-base); }
         .card.level-b2 { border: 2px solid var(--platinum); box-shadow: 0 0 10px var(--platinum-base); }
         .card.level-b1 { border: 2px solid var(--bronze); box-shadow: 0 0 10px var(--bronze-base); }
 
-        /* Stronger highlight on hover */
         .card.level-c1:hover { box-shadow: 0 0 25px var(--gold-glow); transform: translateY(-5px); }
         .card.level-b2:hover { box-shadow: 0 0 25px var(--platinum-glow); transform: translateY(-5px); }
         .card.level-b1:hover { box-shadow: 0 0 25px var(--bronze-glow); transform: translateY(-5px); }
 
-        .card-img-container { width: 100%; height: 200px; overflow: hidden; position: relative; cursor: pointer; }
+        /* Добавлен фон в качестве плейсхолдера для пустых картинок */
+        .card-img-container { 
+            width: 100%; height: 200px; overflow: hidden; position: relative; cursor: pointer;
+            background-color: var(--header-border);
+        }
         .card-img-container img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s ease; }
         .card:hover .card-img-container img { transform: scale(1.08); }
 
@@ -117,7 +119,6 @@
         .card.level-b2 .cert-badge { background-color: var(--platinum-base); color: var(--platinum); border: 1px solid var(--platinum); }
         .card.level-b1 .cert-badge { background-color: var(--bronze-base); color: var(--bronze); border: 1px solid var(--bronze); }
 
-        /* Fullscreen Modal */
         .modal {
             display: none; position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.85); z-index: 1000;
             justify-content: center; align-items: center; padding: 2rem; backdrop-filter: blur(4px);
@@ -157,7 +158,6 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/12.18.0/firebase-database.js";
 
-        // Theme Toggle Logic
         const themeToggle = document.getElementById('themeToggle');
         const themeIcon = document.getElementById('themeIcon');
         const htmlEl = document.documentElement;
@@ -176,7 +176,6 @@
             themeIcon.textContent = theme === 'light' ? '🌙' : '☀️';
         }
 
-        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyAIpn0b6tQiLRP8YWKslr_N7lb4_siOEbQ",
             authDomain: "randomproject1-96576.firebaseapp.com",
@@ -194,20 +193,23 @@
         const container = document.getElementById('cardContainer');
         const loader = document.getElementById('loader');
 
-        // Modal Logic
         const modal = document.getElementById('imageModal');
         const modalImg = document.getElementById('modalImg');
 
-        function openModal(src) {
-            modalImg.src = src;
-            modal.classList.add('show');
-        }
+        // Глобальная функция открытия модального окна 
+        // (теперь достаем src напрямую из элемента img, а не передаем в onclick)
+        window.openModal = function(id) {
+            const imgEl = document.getElementById(`img-${id}`);
+            if (imgEl && imgEl.src) {
+                modalImg.src = imgEl.src;
+                modal.classList.add('show');
+            }
+        };
 
         modal.addEventListener('click', () => {
             modal.classList.remove('show');
         });
 
-        // Fetch Data and Render Cards
         onValue(cardsRef, (snapshot) => {
             container.innerHTML = '';
             const data = snapshot.val();
@@ -219,7 +221,6 @@
 
             const certs = Object.keys(data).map(key => ({ id: key, ...data[key] }));
 
-            // Sort: Level (C1 > B2 > B1) then Alphabetical by Last Name
             const levelWeight = { 'C1': 3, 'B2': 2, 'B1': 1 };
             certs.sort((a, b) => {
                 const weightA = levelWeight[a.levelCategory] || 0;
@@ -232,25 +233,22 @@
                 return nameA.localeCompare(nameB);
             });
 
+            // ШАГ 1: Отрисовываем все карточки БЕЗ изображений
             certs.forEach(cert => {
-                // Строгая проверка: если нет photoUrl (например, старые Base64 записи), игнорируем
-                if (!cert.photoUrl) return; 
-
                 const card = document.createElement('div');
                 const levelClass = cert.levelCategory ? cert.levelCategory.toLowerCase() : 'b1';
                 card.className = `card level-${levelClass}`;
 
-                // Image Wrapper
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'card-img-container';
-                const img = document.createElement('img');
+                imgContainer.onclick = () => window.openModal(cert.id);
                 
-                img.src = cert.photoUrl;
+                const img = document.createElement('img');
+                img.id = `img-${cert.id}`;
                 img.alt = 'Certificate';
-                imgContainer.onclick = () => openModal(img.src);
+                // Обратите внимание: src мы не задаем!
                 imgContainer.appendChild(img);
 
-                // Content Wrapper
                 const content = document.createElement('div');
                 content.className = 'card-content';
 
@@ -278,6 +276,23 @@
                 card.appendChild(content);
                 container.appendChild(card);
             });
+
+            // ШАГ 2: Загружаем изображения по одному сверху вниз
+            async function loadImagesSequentially() {
+                for (let cert of certs) {
+                    await new Promise(resolve => {
+                        const img = document.getElementById(`img-${cert.id}`);
+                        if (!img) { resolve(); return; }
+                        
+                        // Когда картинка успешно отрендерилась браузером — переходим к следующей
+                        img.onload = () => resolve();
+                        img.onerror = () => resolve(); 
+                        
+                        img.src = cert.photoBase64 || '';
+                    });
+                }
+            }
+            loadImagesSequentially();
         });
     </script>
 </body>
