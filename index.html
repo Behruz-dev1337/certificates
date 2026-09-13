@@ -225,7 +225,7 @@
                 const weightA = levelWeight[a.levelCategory] || 0;
                 const weightB = levelWeight[b.levelCategory] || 0;
                 if (weightA !== weightB) {
-                    return weightB - weightA; // High to low
+                    return weightB - weightA;
                 }
                 const nameA = a.lastName ? a.lastName.toLowerCase() : '';
                 const nameB = b.lastName ? b.lastName.toLowerCase() : '';
@@ -233,9 +233,8 @@
             });
 
             certs.forEach(cert => {
-                // Если останутся старые сертификаты без photoUrl (с photoBase64), этот код их пропустит 
-                // так как вы собирались перезагрузить базу, но на всякий случай можно добавить фолбэк.
-                if (!cert.photoUrl && !cert.photoBase64) return; 
+                // Строгая проверка: если нет photoUrl (например, старые Base64 записи), игнорируем
+                if (!cert.photoUrl) return; 
 
                 const card = document.createElement('div');
                 const levelClass = cert.levelCategory ? cert.levelCategory.toLowerCase() : 'b1';
@@ -246,8 +245,7 @@
                 imgContainer.className = 'card-img-container';
                 const img = document.createElement('img');
                 
-                // Используем photoUrl
-                img.src = cert.photoUrl || cert.photoBase64 || '';
+                img.src = cert.photoUrl;
                 img.alt = 'Certificate';
                 imgContainer.onclick = () => openModal(img.src);
                 imgContainer.appendChild(img);
@@ -269,7 +267,6 @@
 
                 const scoreSpan = document.createElement('span');
                 scoreSpan.className = 'cert-badge';
-                // E.g., C1 (7.5) for IELTS or just C1 for CEFR
                 scoreSpan.textContent = cert.type === 'IELTS' ? `${cert.levelCategory} (${cert.score})` : cert.score;
 
                 detailsDiv.appendChild(typeSpan);
