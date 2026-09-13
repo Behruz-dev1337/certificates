@@ -233,6 +233,10 @@
             });
 
             certs.forEach(cert => {
+                // Если останутся старые сертификаты без photoUrl (с photoBase64), этот код их пропустит 
+                // так как вы собирались перезагрузить базу, но на всякий случай можно добавить фолбэк.
+                if (!cert.photoUrl && !cert.photoBase64) return; 
+
                 const card = document.createElement('div');
                 const levelClass = cert.levelCategory ? cert.levelCategory.toLowerCase() : 'b1';
                 card.className = `card level-${levelClass}`;
@@ -241,7 +245,9 @@
                 const imgContainer = document.createElement('div');
                 imgContainer.className = 'card-img-container';
                 const img = document.createElement('img');
-                img.src = cert.photoBase64 || '';
+                
+                // Используем photoUrl
+                img.src = cert.photoUrl || cert.photoBase64 || '';
                 img.alt = 'Certificate';
                 imgContainer.onclick = () => openModal(img.src);
                 imgContainer.appendChild(img);
